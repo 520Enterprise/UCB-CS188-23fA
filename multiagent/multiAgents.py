@@ -150,21 +150,17 @@ class MinimaxAgent(MultiAgentSearchAgent):
         def maxValue(state, depth):
             if depth == self.depth or state.isWin() or state.isLose():
                 return self.evaluationFunction(state)
-            v = -float('inf')
-            for action in state.getLegalActions(0):
-                v = max(v, minValue(state.generateSuccessor(0, action), depth, 1))
-            return v
+            successors = [state.generateSuccessor(0, action) for action in state.getLegalActions(0)]
+            return max([minValue(successor, depth, 1) for successor in successors])
 
         def minValue(state, depth, agentIndex):
             if depth == self.depth or state.isWin() or state.isLose():
                 return self.evaluationFunction(state)
-            v = float('inf')
-            for action in state.getLegalActions(agentIndex):
-                if agentIndex == numAgents - 1:
-                    v = min(v, maxValue(state.generateSuccessor(agentIndex, action), depth + 1))
-                else:
-                    v = min(v, minValue(state.generateSuccessor(agentIndex, action), depth, agentIndex + 1))
-            return v
+            successors = [state.generateSuccessor(agentIndex, action) for action in state.getLegalActions(agentIndex)]
+            if agentIndex == numAgents - 1:
+                return min([maxValue(successor, depth + 1) for successor in successors])
+            else:
+                return min([minValue(successor, depth, agentIndex + 1) for successor in successors])
 
         legalActions = gameState.getLegalActions(0)
         scores = [minValue(gameState.generateSuccessor(0, action), 0, 1) for action in legalActions]
@@ -237,7 +233,30 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        numAgents = gameState.getNumAgents()
+
+        def avg(list):
+            return sum(list) / len(list)
+
+        def maxValue(state, depth):
+            if depth == self.depth or state.isWin() or state.isLose():
+                return self.evaluationFunction(state)
+            successors = [state.generateSuccessor(0, action) for action in state.getLegalActions(0)]
+            return max([expValue(successor, depth, 1) for successor in successors])
+
+        def expValue(state, depth, agentIndex):
+            if depth == self.depth or state.isWin() or state.isLose():
+                return self.evaluationFunction(state)
+            successors = [state.generateSuccessor(agentIndex, action) for action in state.getLegalActions(agentIndex)]
+            if agentIndex == numAgents - 1:
+                return avg([maxValue(successor, depth + 1) for successor in successors])
+            else:
+                return avg([expValue(successor, depth, agentIndex + 1) for successor in successors])
+
+        legalActions = gameState.getLegalActions(0)
+        scores = [expValue(gameState.generateSuccessor(0, action), 0, 1) for action in legalActions]
+        bestScore = max(scores)
+        return legalActions[scores.index(bestScore)]
 
 
 def betterEvaluationFunction(currentGameState: GameState):
@@ -248,7 +267,32 @@ def betterEvaluationFunction(currentGameState: GameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    newPos = currentGameState.getPacmanPosition()
+    newFoods = currentGameState.getFood().asList()
+    newGhostStates = currentGameState.getGhostStates()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+    newCapsules = currentGameState.getCapsules()
+
+    distToGhost = [manhattanDistance(newPos, ghost.getPosition()) for ghost in newGhostStates]
+    distToFood = [manhattanDistance(newPos, food) for food in newFoods]
+    distToCapsule = [manhattanDistance(newPos, capsule) for capsule in newCapsules]
+    if len(distToFood) == 0:
+        return float('inf')
+    if min(distToGhost) < 2:
+        return float('-inf')
+    # if capsule is near, go for it
+    if min(distToCapsule) == 0:
+        return float('inf')
+    if sum(distToFood) < 10:
+        return - 10*sum(distToFood) - 55*min(distToFood) + 100 + currentGameState.getScore() * (100 + 10 / sum(distToFood))
+    if min(distToFood) > 10:
+        return - 10*sum(distToFood) -55*min(distToFood) + 100 + currentGameState.getScore() * (100 + 10 / sum(distToFood))
+    if min(distToGhost) > 5 or min(newScaredTimes) > 0:
+        return - 10*sum(distToFood) - 15*min(distToFood) - 5*min(distToFood) + 100 + currentGameState.getScore() * (100 + 10 / sum(distToFood)) - 10 * min(distToCapsule)
+    else:
+        return (- 5*sum(distToFood) + 10 * min(distToGhost) - 30*min(distToFood)
+                + currentGameState.getScore() * (100 + 10 / sum(distToFood)) - 10 * min(distToCapsule))
+
 
 
 # Abbreviation
