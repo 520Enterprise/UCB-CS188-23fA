@@ -278,20 +278,26 @@ def betterEvaluationFunction(currentGameState: GameState):
     distToCapsule = [manhattanDistance(newPos, capsule) for capsule in newCapsules]
     if len(distToFood) == 0:
         return float('inf')
+    if len(distToCapsule) == 0:
+        capsuleScore = 0
+    else:
+        capsuleScore = 10 * min(distToCapsule)
     if min(distToGhost) < 2:
         return float('-inf')
     # if capsule is near, go for it
-    if min(distToCapsule) == 0:
+    if len(distToCapsule) > 0 and min(distToCapsule) == 0:
         return float('inf')
+    if min(newScaredTimes) > min(distToGhost):
+        return 50*min(distToGhost) + 100 + currentGameState.getScore() * (200 + 10 / sum(distToFood))
     if sum(distToFood) < 10:
         return - 10*sum(distToFood) - 55*min(distToFood) + 100 + currentGameState.getScore() * (100 + 10 / sum(distToFood))
     if min(distToFood) > 10:
         return - 10*sum(distToFood) -55*min(distToFood) + 100 + currentGameState.getScore() * (100 + 10 / sum(distToFood))
     if min(distToGhost) > 5 or min(newScaredTimes) > 0:
-        return - 10*sum(distToFood) - 15*min(distToFood) - 5*min(distToFood) + 100 + currentGameState.getScore() * (100 + 10 / sum(distToFood)) - 10 * min(distToCapsule)
+        return - 10*sum(distToFood) - 15*min(distToFood) - 5*min(distToFood) + 100 + currentGameState.getScore() * (100 + 10 / sum(distToFood)) - capsuleScore
     else:
         return (- 5*sum(distToFood) + 10 * min(distToGhost) - 30*min(distToFood)
-                + currentGameState.getScore() * (100 + 10 / sum(distToFood)) - 10 * min(distToCapsule))
+                + currentGameState.getScore() * (100 + 10 / sum(distToFood)) - capsuleScore)
 
 
 
