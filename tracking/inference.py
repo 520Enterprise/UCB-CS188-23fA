@@ -10,8 +10,7 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-
-
+import collections
 import random
 import itertools
 from typing import List, Dict, Tuple
@@ -211,7 +210,6 @@ def inferenceByVariableEliminationWithCallTracking(callTrackingList=None):
         fullJointOverQueryAndEvidence = joinFactors(currentFactorsList)
 
         print("fullJointOverQueryAndEvidence: ", fullJointOverQueryAndEvidence)
-
 
         # normalize so that the probability sums to one
         # the input factor contains only the query variables and the evidence variables,
@@ -657,7 +655,10 @@ class ParticleFilter(InferenceModule):
         """
         self.particles = []
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        numLegalPositions = len(self.legalPositions)
+        for i in range(self.numParticles):
+            index = i % numLegalPositions
+            self.particles.append(self.legalPositions[index])
         "*** END YOUR CODE HERE ***"
 
     def getBeliefDistribution(self):
@@ -669,7 +670,11 @@ class ParticleFilter(InferenceModule):
         This function should return a normalized distribution.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        beliefDistribution = DiscreteDistribution()
+        for particle in self.particles:
+            beliefDistribution[particle] += 1
+        beliefDistribution.normalize()
+        return beliefDistribution
         "*** END YOUR CODE HERE ***"
 
     ########### ########### ###########
@@ -689,7 +694,31 @@ class ParticleFilter(InferenceModule):
         the DiscreteDistribution may be useful.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        pacmanPosition = gameState.getPacmanPosition()
+        jailPosition = self.getJailPosition()
+        """
+        weightDistribution = DiscreteDistribution()
+        for particle in self.particles:
+            weightDistribution[particle] += self.getObservationProb(observation, pacmanPosition, particle,
+                                                                    jailPosition)
+        weightDistribution.normalize()
+        if weightDistribution.total() == 0:
+            self.initializeUniformly(gameState)
+        else:
+            self.particles = [weightDistribution.sample() for _ in range(self.numParticles)]
+        """
+        # Another way to implement (I think it's better)
+        beliefDistribution = self.getBeliefDistribution()
+        # visit all distinct particles
+        distinctParticles = set(self.particles)
+        for particle in distinctParticles:
+            beliefDistribution[particle] *= self.getObservationProb(observation, pacmanPosition, particle,
+                                                                    jailPosition)
+        beliefDistribution.normalize()
+        if beliefDistribution.total() == 0:
+            self.initializeUniformly(gameState)
+        else:
+            self.particles = [beliefDistribution.sample() for _ in range(self.numParticles)]
         "*** END YOUR CODE HERE ***"
 
     ########### ########### ###########
@@ -702,5 +731,13 @@ class ParticleFilter(InferenceModule):
         gameState.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        newParticles = []
+        # count distinct particle
+        numDistinctParticle = collections.Counter(self.particles)
+        for oldPos, num in numDistinctParticle.items():
+            newPosDist = self.getPositionDistribution(gameState, oldPos)
+            for _ in range(num):
+                newParticle = newPosDist.sample()
+                newParticles.append(newParticle)
+        self.particles = newParticles
         "*** END YOUR CODE HERE ***"
